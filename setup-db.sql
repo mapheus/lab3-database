@@ -15,31 +15,32 @@ PRAGMA foreign_keys=ON;
 -- Create the tables.
 
 CREATE TABLE theaters (
-  theater_name		TEXT,
+  theater		TEXT,
   capacity		INT,
-  PRIMARY KEY  (theater_name)
+  PRIMARY KEY  (theater)
 );
 
 
 CREATE TABLE movies (
-  imdb_key		TEXT,
-  movie_name		TEXT,
-  production_year	INT,
+  imdbKey		TEXT,
+  title		TEXT,
+  year	INT,
   running_time		INT,
-  PRIMARY KEY (imdb_key)
+  PRIMARY KEY (title, year)
 );
 
 
 CREATE TABLE performances (
-  performance_id   TEXT DEFAULT (lower(hex(randomblob(16)))),
-  start_time		TIME,
-  start_date		DATE,
-  theater_name		TEXT,
-  imdb_key		TEXT,
-  seats_available   INT,
-  PRIMARY KEY (performance_id),
-  FOREIGN KEY (theater_name) REFERENCES theaters(theater_name),
-  FOREIGN KEY (imdb_key) REFERENCES movies(imdb_key)
+  performanceId   TEXT DEFAULT (lower(hex(randomblob(16)))),
+  time		TIME,
+  date		DATE,
+  remaining   INT,
+  theater		TEXT,
+  title     TEXT,
+  year      INT,
+  PRIMARY KEY (performanceId),
+  FOREIGN KEY (theater) REFERENCES theaters(theater),
+  FOREIGN KEY (title, year) REFERENCES movies(title, year)
 );
 
 
@@ -55,9 +56,9 @@ CREATE TABLE customers(
 CREATE TABLE tickets (
   t_id			TEXT DEFAULT (lower(hex(randomblob(16)))),
   username		TEXT,
-  performance_id        INT,
+  performanceId        INT,
   PRIMARY KEY (t_id),
-  FOREIGN KEY (performance_id) REFERENCES performances(performance_id),
+  FOREIGN KEY (performanceId) REFERENCES performances(performanceId),
   FOREIGN KEY (username) REFERENCES customers(username)
 );
 

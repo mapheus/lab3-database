@@ -42,7 +42,7 @@ public class App {
      */ 
     public static String r_ping(Request req, Response res) {
         res.status(200);
-        res.body("Ping");
+        res.body("pong");
         return res.body();
     }
 }
@@ -120,7 +120,7 @@ class Database {
         }
 
         String query =
-            "SELECT *\n" +
+            "SELECT imdbKey, title, year\n" +
             "FROM   movies\n" +
             "WHERE  1 = 1\n";
 
@@ -142,9 +142,9 @@ class Database {
         int year = Integer.parseInt(req.queryParams("year"));
 
         String query =
-            "SELECT imdb_key, movie_name AS name, production_year AS year\n" +
+            "SELECT imdbKey, title, year\n" +
             "FROM   movies\n" +
-            "WHERE  movie_name = ? AND year = ?\n";
+            "WHERE  title = ? AND year = ?\n";
 
         try (PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, title);
@@ -165,9 +165,9 @@ class Database {
         String id = req.params(":id");
 
         String query =
-            "SELECT imdb_key, movie_name AS name, production_year AS year\n" +
+            "SELECT imdbKey, title, year\n" +
             "FROM   movies\n" +
-            "WHERE  imdb_key = ?\n";
+            "WHERE  imdbKey = ?\n";
 
         try (PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, id);
@@ -215,13 +215,15 @@ class Database {
         String theater = req.queryParams("theater");
         String date = req.queryParams("date");
         String time = req.queryParams("time");
+        String title = "";
+        int year = 0;
         int seats = 0;
 
         // Check if theater exists
         String query =
             "SELECT *\n" +
             "FROM   theaters\n" +
-            "WHERE  theater_name = ?\n";
+            "WHERE  theater = ?\n";
 
         try (PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, theater);
@@ -240,7 +242,7 @@ class Database {
         query =
             "SELECT *\n" +
             "FROM   movies\n" +
-            "WHERE  imdb_key = ?\n";
+            "WHERE  imdbKey = ?\n";
 
         try (PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, imdb);
@@ -248,6 +250,9 @@ class Database {
             if(rs.next() == false) {
                 res.status(404);
                 return "No such movie exists.";
+            } else {
+                year = rs.getInt("year");
+                title = rs.getString("title");
             }
         } catch(SQLException e) {
             e.printStackTrace();
@@ -256,15 +261,16 @@ class Database {
         // Post performance
         String statement =
             "INSERT\n" +
-            "INTO    performances(imdb_key, theater_name, start_date, start_time, seats_available)\n" +
-            "VALUES  (?, ?, ?, ?, ?)";
+            "INTO    performances(date, time, title, year, theater, remaining)\n" +
+            "VALUES  (?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement ps = conn.prepareStatement(statement)) {
-            ps.setString(1, imdb);
-            ps.setString(2, theater);
-            ps.setString(3, date);
-            ps.setString(4, time);
-            ps.setInt(5, seats);
+            ps.setString(1, date);
+            ps.setString(2, time);
+            ps.setString(3, title);
+            ps.setInt(4, year);
+            ps.setString(5, theater);
+            ps.setInt(6, seats);
             ps.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -272,18 +278,18 @@ class Database {
 
         // Get ID and return
         query =
-            "SELECT performance_id\n" +
+            "SELECT performanceId\n" +
             "FROM   performances\n" +
             "WHERE  1 = 1\n";
 
         try (PreparedStatement ps = conn.prepareStatement(query)) {
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
-                String id = rs.getString("performance_id");
+                String id = rs.getString("performanceId");
                 String result = String.format("{ 'id': %s }", id);
                 res.status(201);
                 res.body(result);
-                return String.format("/performances/%s", id);
+                return String.format("%s", id);
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -315,7 +321,7 @@ class Database {
             if (rs.next()) {
                 if(!hashPwd.equals(rs.getString("password"))) {
                     res.status(400);
-                    return "Incorrect password.";
+                    return "Wrong password";
                 }
             } else {
                 return "Wrong username.";
@@ -328,7 +334,7 @@ class Database {
         query = 
         "SELECT *\n" +
         "FROM performances\n" +
-        "WHERE performance_id = ?";
+        "WHERE performanceId = ?";
 
         try(PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, performance);
@@ -336,7 +342,7 @@ class Database {
             if (!rs.next()) {
                 return "No such performance!";
             } else {
-                seats = rs.getInt("seats_available");
+                seats = rs.getInt("remaining");
             }
         } catch(SQLException e) {
             e.printStackTrace();
@@ -344,47 +350,35 @@ class Database {
         
         // Update seats
         if(seats < 1) {
-            return "No seats left.";
+            return "No tickets left";
         }
 
         String statement =
             "UPDATE performances\n" +
-            "set    seats_available = ?";
+            "set    remaining = ?" +
+            "WHERE  performanceId = ?";
 
         try (PreparedStatement ps = conn.prepareStatement(statement)) {
             ps.setInt(1, seats-1);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        // Post ticket
-        statement =
-            "INSERT\n" +
-            "INTO    tickets(username, performance_id)\n" +
-            "VALUES  (?, ?)";
-
-        try (PreparedStatement ps = conn.prepareStatement(statement)) {
-            ps.setString(1, user);
             ps.setString(2, performance);
             ps.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
+
+
         // Get amount of customer tickets
         query = 
-        "SELECT nbrOfTickets\n" +
-        "FROM customers\n" +
+        "SELECT *\n" +
+        "FROM tickets\n" +
         "WHERE username = ?";
 
         try(PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, user);
             ResultSet rs = ps.executeQuery();
-            if (!rs.next()) {
-                return "No such user!";
-            } else {
-                tickets = rs.getInt("nbrOfTickets");
+            while (rs.next()) {
+                tickets++;
             }
         } catch(SQLException e) {
             e.printStackTrace();
@@ -403,6 +397,21 @@ class Database {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
+
+        // Post ticket
+                statement =
+                "INSERT\n" +
+                "INTO    tickets(username, performanceId)\n" +
+                "VALUES  (?, ?)";
+    
+            try (PreparedStatement ps = conn.prepareStatement(statement)) {
+                ps.setString(1, user);
+                ps.setString(2, performance);
+                ps.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
 
         // Get ID and return
         query =
@@ -425,7 +434,7 @@ class Database {
 
 
 
-        return "Error.";
+        return "Error";
     }
 
     String getCustomerTickets(Request req, Response res) {
@@ -433,14 +442,14 @@ class Database {
 
          // Get ID and return
         String query =
-            "SELECT nbrOfTickets, start_date, start_time, theater_name, movie_name AS title, production_year AS year\n" +
+            "SELECT nbrOfTickets, date, time, theater, title, year\n" +
             "FROM   customers\n" +
             "JOIN   tickets\n" +
             "USING  (username)" +
             "JOIN   performances\n" +
-            "USING  (performance_id)" +
+            "USING  (performanceId)" +
             "JOIN   movies\n" +
-            "USING  (imdb_key)";
+            "USING  (title, year)";
 
         try (PreparedStatement ps = conn.prepareStatement(query)) {
             ResultSet rs = ps.executeQuery();
@@ -476,9 +485,9 @@ class Database {
         String customer1 = "INSERT INTO customers (username, full_name, password)VALUES (?, ?, ?);\n";
         String customer2 = "INSERT INTO customers (username, full_name, password)VALUES (?, ?, ?);\n";
 
-        String movie1 = "INSERT INTO movies(movie_name, production_year, imdb_key) VALUES (?, ?, ?);\n";
-        String movie2 = "INSERT INTO movies(movie_name, production_year, imdb_key) VALUES (?, ?, ?);\n";
-        String movie3 = "INSERT INTO movies(movie_name, production_year, imdb_key) VALUES (?, ?, ?);\n";
+        String movie1 = "INSERT INTO movies(title, year, imdbKey) VALUES (?, ?, ?);\n";
+        String movie2 = "INSERT INTO movies(title, year, imdbKey) VALUES (?, ?, ?);\n";
+        String movie3 = "INSERT INTO movies(title, year, imdbKey) VALUES (?, ?, ?);\n";
         String theater1 = "INSERT INTO theaters VALUES (?, ?);\n";
         String theater2 = "INSERT INTO theaters VALUES (?, ?);\n";
         String theater3 = "INSERT INTO theaters VALUES (?, ?);\n";
@@ -532,7 +541,7 @@ class Database {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return "done?";
+        return "OK";
     }
 }
 
