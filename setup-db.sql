@@ -36,6 +36,7 @@ CREATE TABLE performances (
   start_date		DATE,
   theater_name		TEXT,
   imdb_key		TEXT,
+  seats_available   INT,
   PRIMARY KEY (performance_id),
   FOREIGN KEY (theater_name) REFERENCES theaters(theater_name),
   FOREIGN KEY (imdb_key) REFERENCES movies(imdb_key)
@@ -47,6 +48,7 @@ CREATE TABLE customers(
   username		TEXT,
   full_name		TEXT,
   password		TEXT,
+  nbrOfTickets  INT,
   PRIMARY KEY (username)
 );
 
