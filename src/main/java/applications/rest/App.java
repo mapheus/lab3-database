@@ -23,27 +23,17 @@ import java.io.IOException;
 public class App {
 
     public static void main(String[] args) {
-        Database db = new Database("theater-chain.sqlite");
-        port(7007);
+        Database db = new Database("krusty-kookies.sqlite");
+        port(8888);
 
         // Routes
-        get("/ping", (req, res) -> r_ping(req, res));
+        post("/reset", (req, res) -> db.reset(req, res));
         get("/movies", (req, res) -> db.getMovies(req, res));
         get("/movies/:id", (req, res) -> db.getMovieById(req, res));
         get("/performances", (req, res) -> db.getPerformances(req, res));
         post("/performances", (req, res) -> db.postPerformances(req, res));
         post("/tickets", (req, res) -> db.postTickets(req, res));
         get("/customers/:id/tickets", (req, res) -> db.getCustomerTickets(req, res));
-        post("/reset", (req, res) -> db.reset(req, res));
-    }
-
-    /*  ROUTE: /ping
-     *  DESC: Returns string Pong
-     */ 
-    public static String r_ping(Request req, Response res) {
-        res.status(200);
-        res.body("pong");
-        return res.body();
     }
 }
 
@@ -110,6 +100,237 @@ class Database {
     /* ================================== */
     /* --- insert your own code below --- */
     /* ===============================*== */
+
+    void insertIntoCustomers(String customer_name, String customer_address) {
+        String statement = "INSERT INTO customers (customer_name, customer_address) VALUES (?, ?);";
+
+        try(PreparedStatement ps = conn.prepareStatement(statement)) {
+            ps.setString(1, customer_name);
+            ps.setString(2, customer_address);
+            ps.executeUpdate();
+        } catch(SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    void insertIntoRecipes(String recipe_name) {
+        String statement = "INSERT INTO recipes (recipe_name) VALUES (?);";
+
+        try(PreparedStatement ps = conn.prepareStatement(statement)) {
+            ps.setString(1, recipe_name);
+            ps.executeUpdate();
+        } catch(SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    void insertIntoRecipeUsed(String recipe_name, String order_id) {
+        String statement = "INSERT INTO recipe_used (recipe_name, order_id) VALUES (?, ?);";
+
+        try(PreparedStatement ps = conn.prepareStatement(statement)) {
+            ps.setString(1, recipe_name);
+            ps.setString(2, order_id);
+            ps.executeUpdate();
+        } catch(SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    
+    void insertIntoIngredients(String name, String unit) {
+        String statement = "INSERT INTO ingredients (ingredient_name, unit) VALUES (?, ?);";
+    
+        try(PreparedStatement ps = conn.prepareStatement(statement)) {
+            ps.setString(1, name);
+            ps.setString(2, unit);
+            ps.executeUpdate();
+        } catch(SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    void insertIntoIngredientsUsed(int amount, String ingredient_name, String recipe_name) {
+        String statement = "INSERT INTO ingredients_used (amount, ingredient_name, recipe_name) VALUES (?, ?, ?);";
+
+        try(PreparedStatement ps = conn.prepareStatement(statement)) {
+            ps.setInt(1, amount);
+            ps.setString(2, ingredient_name);
+            ps.setString(3, recipe_name);
+            ps.executeUpdate();
+        } catch(SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    
+
+    void insertIntoRestocks(String arrival_date, int amount, String ingredient_name) {
+        String statement = "INSERT INTO restocks (arrival_date, amount, ingredient_name) VALUES (?, ?, ?);";
+
+        try(PreparedStatement ps = conn.prepareStatement(statement)) {
+            ps.setString(1, arrival_date);
+            ps.setInt(2, amount);
+            ps.setString(3, ingredient_name);
+            ps.executeUpdate();
+        } catch(SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    void insertIntoPallets(String production_date, String expiration_date, int blocked, String state, String recipe_name) {
+        String statement = "INSERT INTO pallets (production_date, expiration_date, blocked, state, recipe_name) VALUES (?, ?, ?, ?, ?);";
+
+        try(PreparedStatement ps = conn.prepareStatement(statement)) {
+            ps.setString(1, production_date);
+            ps.setString(2, expiration_date);
+            ps.setInt(3, blocked);
+            ps.setString(4, state);
+            ps.setString(5, recipe_name);
+            ps.executeUpdate();
+        } catch(SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    void insertIntoOrders(int amount, String order_date, String last_delivery_date, int delivered, String customer_name) {
+        String statement = "INSERT INTO orders (amount, order_date, last_delivery_date, delivered, customer_name) VALUES (?, ?, ?, ?, ?);";
+
+        try(PreparedStatement ps = conn.prepareStatement(statement)) {
+            ps.setInt(1, amount);
+            ps.setString(2, order_date);
+            ps.setString(3, last_delivery_date);
+            ps.setInt(4, delivered);
+            ps.setString(5, customer_name);
+            ps.executeUpdate();
+        } catch(SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+
+
+    void emptyDatabase() {
+        int tablesize = 7;
+        String[] tables = new String[tablesize];
+        tables[0] = "restocks";
+        tables[1] = "ingredients";
+        tables[2] = "ingredients_used";
+        tables[3] = "recipes";
+        tables[4] = "pallets";
+        tables[5] = "orders";
+        tables[6] = "customers";
+
+
+        for(int i = 0; i < tablesize; i++) {
+            String statement = "DELETE FROM " + tables[i] + ";\n";
+            try (PreparedStatement ps = conn.prepareStatement(statement)) {
+                ps.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    String reset(Request req, Response res){
+
+        res.type("application/json");
+        emptyDatabase();
+        
+        insertIntoCustomers("Finkakor AB", "Helsingborg");
+        insertIntoCustomers("Småbröd AB", "Malmö");
+        insertIntoCustomers("Kaffebröd AB", "Landskrona");
+        insertIntoCustomers("Bjukakor AB", "Ystad");
+        insertIntoCustomers("Kalaskakor AB", "Trelleborg");
+        insertIntoCustomers("Partykakor AB", "Kristianstad");
+        insertIntoCustomers("Gästkakor AB", "Hässleholm");
+        insertIntoCustomers("Skånekakor AB", "Perstorp");
+
+        insertIntoIngredients("Flour", "g");
+        insertIntoRestocks("2019-03-13", 100000, "Flour");
+        insertIntoIngredients("Butter", "g");
+        insertIntoRestocks("2019-03-13", 100000, "Butter");
+        insertIntoIngredients("Icing sugar", "g");
+        insertIntoRestocks("2019-03-13", 100000, "Icing sugar");
+        insertIntoIngredients("Roasted, chopped nuts", "g");
+        insertIntoRestocks("2019-03-13", 100000, "Roasted, chopped nuts");
+        insertIntoIngredients("Fine-ground nuts", "g");
+        insertIntoRestocks("2019-03-13", 100000, "Fine-ground nuts");
+        insertIntoIngredients("Ground, roasted nuts", "g");
+        insertIntoRestocks("2019-03-13", 100000, "Ground, roasted nuts");
+        insertIntoIngredients("Bread crumbs", "g");
+        insertIntoRestocks("2019-03-13", 100000, "Bread crumbs");
+        insertIntoIngredients("Sugar", "g");
+        insertIntoRestocks("2019-03-13", 100000, "Sugar");
+        insertIntoIngredients("Egg whites", "g");
+        insertIntoRestocks("2019-03-13", 100000, "Egg whites");
+        insertIntoIngredients("Chocolate", "g");
+        insertIntoRestocks("2019-03-13", 100000, "Chocolate");
+        insertIntoIngredients("Marzipan", "g");
+        insertIntoRestocks("2019-03-13", 100000, "Marzipan");
+        insertIntoIngredients("Eggs", "g");
+        insertIntoRestocks("2019-03-13", 100000, "Eggs");
+        insertIntoIngredients("Potato starch", "g");
+        insertIntoRestocks("2019-03-13", 100000, "Potato starch");
+        insertIntoIngredients("Wheat flour", "g");
+        insertIntoRestocks("2019-03-13", 100000, "Wheat flour");
+        insertIntoIngredients("Sodium bicarbonate", "g");
+        insertIntoRestocks("2019-03-13", 100000, "Sodium bicarbonate");
+        insertIntoIngredients("Vanilla", "g");
+        insertIntoRestocks("2019-03-13", 100000, "Vanilla");
+        insertIntoIngredients("Chopped almonds", "g");
+        insertIntoRestocks("2019-03-13", 100000, "Chopped almonds");
+        insertIntoIngredients("Cinnamon", "g");
+        insertIntoRestocks("2019-03-13", 100000, "Cinnamon");
+        insertIntoIngredients("Vanilla sugar", "g");
+        insertIntoRestocks("2019-03-13", 100000, "Vanilla sugar");
+    
+        insertIntoRecipes("Nut ring");
+        insertIntoRecipes("Nut cookie");
+        insertIntoRecipes("Amneris");
+        insertIntoRecipes("Tango");
+        insertIntoRecipes("Almond delight");
+        insertIntoRecipes("Berliner");
+
+        insertIntoIngredientsUsed(450, "Flour", "Nut ring");
+        insertIntoIngredientsUsed(450, "Butter", "Nut ring");
+        insertIntoIngredientsUsed(190, "Icing sugar", "Nut ring");
+        insertIntoIngredientsUsed(225, "Roasted, chopped nuts", "Nut ring");
+
+        insertIntoIngredientsUsed(750, "Fine-ground nuts", "Nut cookie");
+        insertIntoIngredientsUsed(625, "Ground, roasted nuts", "Nut cookie");
+        insertIntoIngredientsUsed(125, "Bread crumbs", "Nut cookie");
+        insertIntoIngredientsUsed(375, "Sugar", "Nut cookie");
+        insertIntoIngredientsUsed(350, "Egg whites", "Nut cookie");
+        insertIntoIngredientsUsed(50, "Chocolate", "Nut cookie");
+
+        insertIntoIngredientsUsed(750, "Marzipan", "Amneris");
+        insertIntoIngredientsUsed(250, "Butter", "Amneris");
+        insertIntoIngredientsUsed(250, "Egg", "Amneris");
+        insertIntoIngredientsUsed(25, "Potato starch", "Amneris");
+        insertIntoIngredientsUsed(25, "Wheat flour", "Amneris");
+
+        insertIntoIngredientsUsed(200, "Butter", "Tango");
+        insertIntoIngredientsUsed(250, "Sugar", "Tango");
+        insertIntoIngredientsUsed(300, "Flour", "Tango");
+        insertIntoIngredientsUsed(4, "Sodium bicarbonate", "Tango");
+        insertIntoIngredientsUsed(2, "Vanilla", "Tango");
+
+        insertIntoIngredientsUsed(400, "Butter", "Almond delight");
+        insertIntoIngredientsUsed(270, "Sugar", "Almond delight");
+        insertIntoIngredientsUsed(279, "Chopped almonds", "Almond delight");
+        insertIntoIngredientsUsed(400, "Flour", "Almond delight");
+        insertIntoIngredientsUsed(10, "Cinnamon", "Almond delight");
+
+        insertIntoIngredientsUsed(350, "Flour", "Berliner");
+        insertIntoIngredientsUsed(250, "Butter", "Berliner");
+        insertIntoIngredientsUsed(100, "Icing sugar", "Berliner");
+        insertIntoIngredientsUsed(50, "Eggs", "Berliner");
+        insertIntoIngredientsUsed(5, "Vanilla sugar", "Berliner");
+        insertIntoIngredientsUsed(50, "Chocolate", "Berliner");
+        
+        res.status(200);
+        return res.toString();
+    }
 
     String getMovies(Request req, Response res) {
         res.type("application/json");
@@ -348,11 +569,11 @@ class Database {
             e.printStackTrace();
         }
         
-        // Update seats
         if(seats < 1) {
             return "No tickets left";
         }
-
+        
+        // Update seats
         String statement =
             "UPDATE performances\n" +
             "set    remaining = ?" +
@@ -463,86 +684,6 @@ class Database {
         return "Error";
     }
 
-    String reset(Request req, Response res){
-
-        res.type("application/json");
-        String[] tables = new String[5];
-        tables[0] = "customers";
-        tables[1] = "movies";
-        tables[2] = "performances";
-        tables[3] = "tickets";
-        tables[4] = "theaters";
-
-        for(int i = 0; i < 5; i++) {
-            String statement = "DELETE FROM " + tables[i] + ";\n";
-            try (PreparedStatement ps = conn.prepareStatement(statement)) {
-                ps.executeUpdate();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-        
-        String customer1 = "INSERT INTO customers (username, full_name, password)VALUES (?, ?, ?);\n";
-        String customer2 = "INSERT INTO customers (username, full_name, password)VALUES (?, ?, ?);\n";
-
-        String movie1 = "INSERT INTO movies(title, year, imdbKey) VALUES (?, ?, ?);\n";
-        String movie2 = "INSERT INTO movies(title, year, imdbKey) VALUES (?, ?, ?);\n";
-        String movie3 = "INSERT INTO movies(title, year, imdbKey) VALUES (?, ?, ?);\n";
-        String theater1 = "INSERT INTO theaters VALUES (?, ?);\n";
-        String theater2 = "INSERT INTO theaters VALUES (?, ?);\n";
-        String theater3 = "INSERT INTO theaters VALUES (?, ?);\n";
-         
-
-
-
-
-
-      try {
-            PreparedStatement cust1 = conn.prepareStatement(customer1);
-            PreparedStatement cust2 = conn.prepareStatement(customer2);
-            PreparedStatement mov1 = conn.prepareStatement(movie1);
-            PreparedStatement mov2 = conn.prepareStatement(movie2);
-            PreparedStatement mov3 = conn.prepareStatement(movie3);
-            PreparedStatement theat1 = conn.prepareStatement(theater1);
-            PreparedStatement theat2 = conn.prepareStatement(theater2);
-            PreparedStatement theat3 = conn.prepareStatement(theater3);
-
-            cust1.setString(1, "alice");
-            cust1.setString(2, "Alice");
-            cust1.setString(3, phg.hash("dobido"));
-            cust2.setString(1, "bob");
-            cust2.setString(2, "Bob");
-            cust2.setString(3, phg.hash("whatsinaname"));
-            mov1.setString(1, "The Shape of Water");
-            mov1.setInt(2, 2017);
-            mov1.setString(3, "tt5580390");
-            mov2.setString(1, "Moonlight");
-            mov2.setInt(2, 2016);
-            mov2.setString(3, "tt4975722");
-            mov3.setString(1, "Spotlight");
-            mov3.setInt(2, 2015);
-            mov3.setString(3, "tt1895587");
-            theat1.setString(1, "Kino");
-            theat1.setInt(2, 10);
-            theat2.setString(1, "Södran");
-            theat2.setInt(2, 16);
-            theat3.setString(1, "Skandia");
-            theat3.setInt(2, 100);
-
-            cust1.executeUpdate();
-            cust2.executeUpdate();
-            mov1.executeUpdate();
-            mov2.executeUpdate();
-            mov3.executeUpdate();
-            theat1.executeUpdate();
-            theat2.executeUpdate();
-            theat3.executeUpdate();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return "OK";
-    }
 }
 
 
